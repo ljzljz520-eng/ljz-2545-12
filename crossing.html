@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路口提示服务 - 慢行网站</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/crossing.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>慢行网站</h1>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="courses.html">课程中心</a></li>
+                <li><a href="plan.html">学习计划</a></li>
+                <li><a href="resources.html">学习资源</a></li>
+                <li><a href="crossing.html" class="active" aria-current="page">路口提示</a></li>
+                <li><a href="profile.html">个人中心</a></li>
+                <li><a href="about.html">关于我们</a></li>
+                <li><a href="contact.html">联系我们</a></li>
+            </ul>
+            <div class="nav-toggle" id="navToggle" aria-label="打开导航菜单">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <header class="crossing-hero">
+        <div class="container">
+            <p class="eyebrow">Slow route hazard watch · 空间版本化</p>
+            <h2>路口坡道、窄桥与照明提示服务</h2>
+            <p>地图与可读列表同时呈现观察点、影响范围、来源和时点。自动关联保留圆形缓冲与道路身份两类证据，编辑确认真实路段后才发布提示；改线只重算里程，不让旧坐标悄悄漂移。</p>
+            <div class="hero-metrics" role="list" aria-label="服务关键统计">
+                <div role="listitem"><strong id="activeCount">0</strong><span>当前有效提示</span></div>
+                <div role="listitem"><strong id="pendingCount">0</strong><span>待人工确认</span></div>
+                <div role="listitem"><strong id="staleCount">0</strong><span>信息待更新</span></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="crossing-main">
+        <div class="container">
+            <div id="cacheBanner" class="cache-banner" role="status" aria-live="polite"></div>
+
+            <section class="panel controls-panel" aria-labelledby="controlsTitle">
+                <div>
+                    <h2 id="controlsTitle">查看范围与缓存</h2>
+                    <p>用筛选器定位同一受影响段；提示不会因为一个点命中路线缓冲而扩散到全线。</p>
+                </div>
+                <div class="controls-grid">
+                    <label>路线版本
+                        <select id="routeVersion">
+                            <option value="route-v2026">v2026-当前</option>
+                            <option value="route-v2025">v2025-归档</option>
+                        </select>
+                    </label>
+                    <label>类型
+                        <select id="filterType">
+                            <option value="all">全部</option>
+                            <option value="ramp">坡道</option>
+                            <option value="narrow_bridge">窄桥</option>
+                            <option value="lighting">照明</option>
+                            <option value="construction">施工</option>
+                            <option value="surface">铺装</option>
+                        </select>
+                    </label>
+                    <label>状态
+                        <select id="filterStatus">
+                            <option value="all">全部</option>
+                            <option value="active">当前有效</option>
+                            <option value="upcoming">未到生效</option>
+                            <option value="expired">信息待更新</option>
+                            <option value="denied">回访否定</option>
+                        </select>
+                    </label>
+                    <label class="checkline"><input type="checkbox" id="offlineToggle"> 模拟离线</label>
+                    <button class="x-btn" id="cacheFresh" type="button">写入新缓存</button>
+                    <button class="x-btn warn" id="cacheExpired" type="button">模拟缓存过期</button>
+                    <button class="x-btn ghost" id="cacheClear" type="button">清除缓存</button>
+                    <button class="x-btn danger" id="resetDemo" type="button">重置演示数据</button>
+                </div>
+                <p class="route-badge">当前空间版本：<strong id="routeVersionLabel"></strong>；演示判断时点固定为 2026-10-01 08:00（UTC+8）。</p>
+            </section>
+
+            <section class="active-panel panel" aria-labelledby="activeTitle">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="activeTitle">当前发布提示</h2>
+                        <p>这里只列出“当前路线版本 + 已确认路段 + 当前有效 + 未被回访否定”的记录。</p>
+                    </div>
+                </div>
+                <div id="activeAlertList" class="alert-list"></div>
+            </section>
+
+            <section class="map-list-grid" aria-label="地图和可读列表">
+                <article class="panel map-panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>分层路线地图</h2>
+                            <p>桥面、坡道、桥下道路与折返段分身份展示；灰线为另一路线版本。</p>
+                        </div>
+                    </div>
+                    <div id="crossingMap" class="crossing-map"></div>
+                </article>
+
+                <article class="panel list-panel">
+                    <div class="section-heading">
+                        <div>
+                            <h2>可读记录列表</h2>
+                            <p>每条记录可通过键盘聚焦，点击后地图、候选表和详情定位同一受影响段。</p>
+                        </div>
+                    </div>
+                    <ul id="recordList" class="record-list"></ul>
+                </article>
+            </section>
+
+            <section id="reviewWorkspace" class="panel" aria-live="polite"></section>
+
+            <section class="panel admin-panel" aria-labelledby="adminTitle">
+                <div class="section-heading">
+                    <div>
+                        <h2 id="adminTitle">后台保存观察点</h2>
+                        <p>保存观察点、影响半径和有效区间后先生成候选；不自动确认真实路段。</p>
+                    </div>
+                    <button class="x-btn" id="recalcAll" type="button">按 v2026 重算全部里程</button>
+                </div>
+                <form id="observationForm" class="observation-form">
+                    <label>记录类型
+                        <select id="recordType">
+                            <option value="ramp">坡道</option>
+                            <option value="narrow_bridge">窄桥</option>
+                            <option value="lighting">照明</option>
+                            <option value="construction">施工</option>
+                            <option value="surface">铺装</option>
+                        </select>
+                    </label>
+                    <label class="wide">标题<input id="recordTitle" required placeholder="例如：窄桥交会照明不足"></label>
+                    <label>X 坐标<input id="pointX" type="number" step="1" value="435" required></label>
+                    <label>Y 坐标<input id="pointY" type="number" step="1" value="288" required></label>
+                    <label>声明道路身份<input id="roadIdentity" value="BR-2026" placeholder="稳定 roadIdentity"></label>
+                    <label>提示缓冲半径（米）<input id="impactRadius" type="number" min="10" max="100" value="55" required></label>
+                    <label>观察时间<input id="observedAt" type="datetime-local" value="2026-10-01T08:30" required></label>
+                    <label>生效开始<input id="validStart" type="datetime-local" value="2026-10-01T09:00" required></label>
+                    <label>生效结束<input id="validEnd" type="datetime-local" value="2026-10-12T20:00" required></label>
+                    <label>来源类型<input id="sourceKind" value="现场巡查"></label>
+                    <label>报告人<input id="reporter" value="后台编辑"></label>
+                    <div class="form-actions wide">
+                        <button class="x-btn primary" type="submit">保存为待确认观察点</button>
+                        <p>生产后台应将点、圆形影响范围、LineStringM 候选与 route_version_id 一并写入空间数据库。</p>
+                    </div>
+                </form>
+            </section>
+
+            <section class="evidence-grid" aria-label="数据来源和空间数据库">
+                <article class="panel">
+                    <h2>来源与时点台账</h2>
+                    <p>前端展示观察、保存、确认和数据缓存时点，避免把过期缓存当作实时安全状态。</p>
+                    <ul id="sourceLedger" class="source-ledger"></ul>
+                </article>
+                <article class="panel schema-panel">
+                    <h2>空间数据库关联草案</h2>
+                    <p>路线版本、道路段稳定身份、候选距离、人工确认和有效期分表保存。</p>
+                    <pre><code id="schemaSql"></code></pre>
+                </article>
+            </section>
+
+            <section class="panel test-matrix" aria-labelledby="testTitle">
+                <h2 id="testTitle">覆盖的关键场景</h2>
+                <div class="test-grid">
+                    <div><strong>上下层重叠道路</strong><p>窄桥观察点同时靠近 OB3 桥面与 IN2 桥下道路，候选和投影距离均保留。</p></div>
+                    <div><strong>双向路线</strong><p>去程、回程分别按 direction/sequence 计算里程，折返段独立标识。</p></div>
+                    <div><strong>有效期交叠</strong><p>同一路段坡道记录在 10/2–10/15 交叠时给出并存/合并警告。</p></div>
+                    <div><strong>回访否定旧记录</strong><p>否定后清空发布链接，即使有效期未结束也不再提示。</p></div>
+                    <div><strong>施工过期</strong><p>显示“信息待更新”，不推导现场已经恢复安全。</p></div>
+                    <div><strong>离线缓存过期</strong><p>超过 24 小时阻断旧提示，并显示缓存生成时点。</p></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="liveStatus" class="sr-only" role="status" aria-live="polite"></div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 慢行网站 · 路口提示服务以人工确认的路段版本为准。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script src="js/crossing-core.js"></script>
+    <script src="js/crossing-data.js"></script>
+    <script src="js/crossing-app.js"></script>
+</body>
+</html>
