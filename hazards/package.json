@@ -1,0 +1,11 @@
+{
+  "name": "manxing-hazards",
+  "version": "1.0.0",
+  "private": true,
+  "description": "慢行网站路口提示服务：分层关联（缓冲/路段身份）、人工确认纠错、路线版本里程重算、有效期与回访语义、离线缓存",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/index.js"
+  },
+  "license": "MIT"
+}

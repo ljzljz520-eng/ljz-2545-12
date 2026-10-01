@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路口提示 - 慢行出行服务</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="hazards/css/hazards.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1>智慧慢行</h1>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="hazards.html" class="active" aria-current="page">路口提示</a></li>
+                <li><a href="courses.html">课程中心</a></li>
+                <li><a href="plan.html">学习计划</a></li>
+                <li><a href="resources.html">学习资源</a></li>
+                <li><a href="profile.html">个人中心</a></li>
+                <li><a href="about.html">关于我们</a></li>
+                <li><a href="contact.html">联系我们</a></li>
+            </ul>
+            <div class="nav-toggle" id="navToggle" aria-label="展开导航菜单" role="button" tabindex="0">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="hz-wrap" id="hzApp">
+        <section class="hz-hero">
+            <h2>🚦 路口提示服务（坡道 · 窄桥 · 照明）</h2>
+            <p>地图与可读列表同步呈现慢行受影响路段。所有观察点先经“自动候选 + 人工确认”才用于提示；
+               提示只绑定<strong>具体受影响路段与里程区间</strong>，不扩散到整条路线。每条记录展示来源与观察时点。</p>
+        </section>
+
+        <div id="hzCacheBanner" class="hz-cache-banner" role="status"></div>
+
+        <section class="hz-card" style="margin-bottom:1rem">
+            <h3>本服务的三条安全原则</h3>
+            <p class="hz-hint">① <strong>几何最近 ≠ 真实路段</strong>：观察点投影可能落在桥下道路、桥面道路或折返的另一段，
+                系统保留全部候选与距离依据，编辑确认真实路段后才提示。<br>
+               ② <strong>里程随版本重算，旧坐标不悄悄漂移</strong>：改线后保留路段身份的沿新版本重算里程；身份消失的记录冻结并标注“待重认”。<br>
+               ③ <strong>施工过期 = 信息待更新，不等于现场已恢复安全</strong>；只有现场回访“确认已恢复”才停止提示。</p>
+        </section>
+
+        <div class="hz-toolbar" aria-label="提示筛选与演示控制">
+            <label>路线
+                <select id="hzRouteFilter" aria-label="按路线筛选">
+                    <option value="all">全部路线</option>
+                    <option value="R-binhe">滨河南路慢行线</option>
+                    <option value="R-bridge">北环跨线桥（桥面）</option>
+                    <option value="R-under">桥下地面路</option>
+                    <option value="R-fold">环山步道（折返段）</option>
+                </select>
+            </label>
+            <label>行进方向
+                <select id="hzDirection" aria-label="行进方向（影响里程方向）">
+                    <option value="forward">去程里程（正向）</option>
+                    <option value="reverse">返程里程（反向换算）</option>
+                </select>
+            </label>
+            <label>滨河路线版本
+                <select id="hzVersionSelect" aria-label="启用的滨河南路路线版本"></select>
+            </label>
+            <button class="hz-btn" id="hzTimeTravel" type="button">当前演示时点：2026-10-01（快进到 12-20）</button>
+            <span class="hz-meta-line" role="separator" aria-hidden="true">|</span>
+            <button class="hz-btn" id="hzSaveOffline" type="button">保存离线快照</button>
+            <button class="hz-btn" id="hzLoadOffline" type="button">读取离线快照</button>
+            <button class="hz-btn hz-warn" id="hzExpireCache" type="button">模拟缓存过期</button>
+            <button class="hz-btn hz-danger" id="hzReset" type="button">重置演示数据</button>
+        </div>
+
+        <div class="hz-grid">
+            <section class="hz-card" aria-labelledby="hzMapTitle">
+                <h3 id="hzMapTitle">🗺️ 地图：仅点亮已确认的受影响路段 <span class="hz-count">（灰色虚线点＝待确认，不提示；空心？＝改线后待重认）</span></h3>
+                <svg id="hzMap" class="hz-map" role="group" aria-label="慢行路线提示地图。可在下方列表与地图段之间切换定位。"></svg>
+                <div class="hz-legend">
+                    <span><i class="hz-swatch" style="background:#e53e3e"></i>有效提示</span>
+                    <span><i class="hz-swatch" style="background:#dd6b20"></i>待核实/施工过期待更新</span>
+                    <span><i class="hz-swatch" style="background:#3182ce"></i>预告</span>
+                    <span><i class="hz-swatch" style="background:#cbd5e0"></i>暂无提示路段</span>
+                </div>
+                <p class="hz-meta-line" style="margin-top:.4rem">键盘：Tab 到红色/橙色路段后回车或聚焦，屏幕阅读器会在右侧列表定位同一受影响段；
+                    列表项获得焦点时地图对应段同步高亮。</p>
+            </section>
+
+            <section class="hz-card" aria-labelledby="hzListTitle">
+                <h3 id="hzListTitle">📋 可读提示列表 <span class="hz-count">（来源 · 观察时点 · 有效区间 · 里程）</span></h3>
+                <ul id="hzList" class="hz-list" aria-live="polite"></ul>
+            </section>
+        </div>
+
+        <section class="hz-card hz-admin" style="margin-top:1.4rem" aria-labelledby="hzAdminTitle">
+            <h3 id="hzAdminTitle">🛠️ 后台：观察点、自动候选、距离依据与人工纠错</h3>
+            <p class="hz-hint">自动关联分两层：<span class="hz-pill identity">identity 路段身份</span> 依据稳定路段身份命中；
+                <span class="hz-pill buffer">buffer 圆形缓冲</span> 依据投影距离。候选仅为建议，必须编辑确认；
+                候选都不对时用“人工纠错”指定真实路段。改线后请到上方切换路线版本观察里程重算与身份失效。</p>
+
+            <form id="hzAddForm" class="hz-form" aria-label="新增观察点">
+                <label>类型<select name="type">
+                    <option value="ramp">坡道</option><option value="narrow_bridge">窄桥</option><option value="lighting">照明</option>
+                </select></label>
+                <label>X（米）<input name="x" type="number" value="120" required></label>
+                <label>Y（米）<input name="y" type="number" value="120" required></label>
+                <label>竖向层<input name="level" type="number" value="0"></label>
+                <label>缓冲半径(米)<input name="radius" type="number" value="20"></label>
+                <label>影响±(米)<input name="impact" type="number" value="20"></label>
+                <label>来源<input name="source" placeholder="如：巡检 10-01"></label>
+                <label>生效起<input name="startAt" type="datetime-local" value="2026-10-01T09:00"></label>
+                <label>生效止（空=长期）<input name="endAt" type="datetime-local"></label>
+                <label style="justify-content:center"><span><input name="construction" type="checkbox"> 施工记录</span></label>
+                <label style="grid-column:1/-1">说明<input name="note" placeholder="观察情况描述"></label>
+                <button class="hz-btn" type="submit">登记观察点（生成候选，待确认）</button>
+            </form>
+
+            <div id="hzAdminList"></div>
+        </section>
+
+        <p class="hz-meta-line" style="margin-top:1rem">演示说明：页面数据为浏览器内模拟后台（localStorage 持久化编辑）；
+            空间库表结构（路线版本/稳定路段身份/候选依据/有效区间）见 <code>hazards/schema/postgis.sql</code>。
+            算法测试：<code>node hazards/tests/index.js</code>。</p>
+    </main>
+
+    <div id="hzLive" class="hz-sr-only" aria-live="polite" role="status"></div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>© 2026 智慧慢行 · 路口提示服务演示 — 数据仅供产品与无障碍设计验证</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+    <script type="module">
+        import { initHazardsPage } from './hazards/src/ui.js';
+        initHazardsPage();
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('hazards/sw.js').catch(() => {}));
+        }
+    </script>
+</body>
+</html>
